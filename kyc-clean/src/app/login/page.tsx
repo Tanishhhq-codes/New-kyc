@@ -6,22 +6,22 @@ import { SignInPage, Testimonial } from "@/components/ui/sign-in";
 
 const sampleTestimonials: Testimonial[] = [
   {
-    avatarSrc: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTBvqJubiz-ncqi482ClA66jbWhGF97e_66_w&s",
-    name: "Leon S Kennedy",
-    handle: "@Mr.Kennedy",
-    text: "exactly what I needed.",
+    avatarSrc: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=256&q=80",
+    name: "Aarav Mehta",
+    handle: "@operations",
+    text: "Simple, fast, and easy to review.",
   },
   {
-    avatarSrc: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQvCgk_PbiB_sxNWRJkCkwrvvO7v2OyPi22Rg&s",
-    name: "Walter White",
-    handle: "@methMaster67",
-    text: "Must have been the wind!!",
+    avatarSrc: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=256&q=80",
+    name: "Priya Sharma",
+    handle: "@compliance",
+    text: "The review flow stays clear even with multiple uploads.",
   },
   {
-    avatarSrc: "https://i.redd.it/abbj8bab42x81.jpg",
-    name: "Kanye West",
-    handle: "@goat",
-    text: "One good girl is worth a thousand bitches.",
+    avatarSrc: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=256&q=80",
+    name: "Daniel Cruz",
+    handle: "@review-team",
+    text: "Feels polished and dependable on desktop and mobile.",
   },
 ];
 
@@ -42,11 +42,11 @@ export default function LoginPage() {
     }
 
     if (loginAsAdmin) {
-      router.push("/admin");
+      router.replace("/admin");
       return;
     }
 
-    router.push("/meteors");
+    router.replace("/meteors");
   };
 
   const handleGoogleSignIn = async (loginAsAdmin: boolean) => {

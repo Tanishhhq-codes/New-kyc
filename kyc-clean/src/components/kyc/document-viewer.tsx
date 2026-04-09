@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   detectKycFileType,
   getDocumentName,
@@ -35,11 +36,9 @@ function DocumentCard({ doc }: { doc: ResolvedDocument }) {
       </div>
 
       {doc.type === "image" ? (
-        <img
-          src={doc.signedUrl}
-          alt={doc.name}
-          className="h-64 w-full rounded-xl bg-zinc-950 object-contain"
-        />
+        <div className="relative h-64 w-full overflow-hidden rounded-xl bg-zinc-950">
+          <Image src={doc.signedUrl} alt={doc.name} fill className="object-contain" unoptimized />
+        </div>
       ) : doc.type === "pdf" ? (
         <iframe
           title={doc.name}

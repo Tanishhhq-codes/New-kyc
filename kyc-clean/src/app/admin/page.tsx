@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { DocumentViewer } from "@/components/kyc/document-viewer";
@@ -64,13 +64,23 @@ export default function AdminPage() {
   const [rejectionNote, setRejectionNote] = useState("");
   const [actionLoading, setActionLoading] = useState<"approved" | "rejected" | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const toastTimeouts = useRef<number[]>([]);
 
   const pushToast = useCallback((text: string, type: ToastMessage["type"]) => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
     setToasts((prev) => [...prev, { id, text, type }]);
-    window.setTimeout(() => {
+    const timeoutId = window.setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
+      toastTimeouts.current = toastTimeouts.current.filter((pendingId) => pendingId !== timeoutId);
     }, 2800);
+    toastTimeouts.current.push(timeoutId);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      toastTimeouts.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      toastTimeouts.current = [];
+    };
   }, []);
 
   const filteredSubmissions = useMemo(() => {
@@ -84,6 +94,29 @@ export default function AdminPage() {
     if (!selectedId) return null;
     return submissions.find((item) => item.id === selectedId) || null;
   }, [selectedId, submissions]);
+
+  const handleFilterChange = (nextFilter: FilterStatus) => {
+    setFilter(nextFilter);
+
+    const nextVisibleSubmissions = submissions.filter((item) => {
+      if (nextFilter === "all") return true;
+      return item.status === nextFilter;
+    });
+
+    if (nextVisibleSubmissions.length === 0) {
+      setSelectedId(null);
+      setRejectionNote("");
+      return;
+    }
+
+    const nextSelectedSubmission =
+      selectedId && nextVisibleSubmissions.some((item) => item.id === selectedId)
+        ? nextVisibleSubmissions.find((item) => item.id === selectedId) || nextVisibleSubmissions[0]
+        : nextVisibleSubmissions[0];
+
+    setSelectedId(nextSelectedSubmission.id);
+    setRejectionNote(nextSelectedSubmission.rejection_note || "");
+  };
 
   const fetchSubmissions = useCallback(async () => {
     setLoading(true);
@@ -103,7 +136,12 @@ export default function AdminPage() {
     const rows = (data || []) as KycSubmission[];
     setSubmissions(rows);
 
-    if (rows.length === 0) {
+    const visibleRows = rows.filter((item) => {
+      if (filter === "all") return true;
+      return item.status === filter;
+    });
+
+    if (visibleRows.length === 0) {
       setSelectedId(null);
       setRejectionNote("");
       setLoading(false);
@@ -111,14 +149,14 @@ export default function AdminPage() {
     }
 
     const nextSelectedId =
-      selectedId && rows.some((row) => row.id === selectedId) ? selectedId : rows[0].id;
+      selectedId && visibleRows.some((row) => row.id === selectedId) ? selectedId : visibleRows[0].id;
 
     setSelectedId(nextSelectedId);
-    const selectedRow = rows.find((row) => row.id === nextSelectedId) || rows[0];
+    const selectedRow = visibleRows.find((row) => row.id === nextSelectedId) || visibleRows[0];
     setRejectionNote(selectedRow.rejection_note || "");
 
     setLoading(false);
-  }, [pushToast, selectedId]);
+  }, [filter, pushToast, selectedId]);
 
   useEffect(() => {
     let alive = true;
@@ -201,11 +239,6 @@ export default function AdminPage() {
       reviewed_by: adminUserId,
     };
 
-    console.log("Updating KYC submission status", {
-      submissionId: selectedSubmission.id,
-      payload,
-    });
-
     setSubmissions((prev) =>
       prev.map((item) =>
         item.id === selectedSubmission.id
@@ -261,7 +294,6 @@ export default function AdminPage() {
       return;
     }
 
-    console.log("KYC status updated successfully", { submissionId: selectedSubmission.id, status });
     pushToast(status === "approved" ? "KYC Approved" : "KYC Rejected", "success");
     await fetchSubmissions();
   };
@@ -285,6 +317,7 @@ export default function AdminPage() {
             Your account does not have admin permissions.
           </p>
           <button
+            type="button"
             onClick={() => router.push("/meteors")}
             className="mt-5 rounded-xl bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white"
           >
@@ -311,6 +344,7 @@ export default function AdminPage() {
             ) : null}
           </div>
           <button
+            type="button"
             onClick={fetchSubmissions}
             className="rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
           >
@@ -322,7 +356,9 @@ export default function AdminPage() {
           {filters.map((item) => (
             <button
               key={item.value}
-              onClick={() => setFilter(item.value)}
+              type="button"
+              onClick={() => handleFilterChange(item.value)}
+              aria-pressed={filter === item.value}
               className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                 filter === item.value
                   ? "bg-zinc-100 text-zinc-900"
@@ -351,6 +387,7 @@ export default function AdminPage() {
                 {filteredSubmissions.map((submission) => (
                   <button
                     key={submission.id}
+                    type="button"
                     onClick={() => {
                       setSelectedId(submission.id);
                       setRejectionNote(submission.rejection_note || "");
@@ -416,6 +453,7 @@ export default function AdminPage() {
 
                 <div className="flex flex-wrap gap-3">
                   <button
+                    type="button"
                     disabled={actionLoading !== null || !hasDbAdminRole}
                     onClick={() => updateStatus("approved")}
                     className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
@@ -423,6 +461,7 @@ export default function AdminPage() {
                     {actionLoading === "approved" ? "Approving..." : "Approve"}
                   </button>
                   <button
+                    type="button"
                     disabled={actionLoading !== null || !hasDbAdminRole}
                     onClick={() => updateStatus("rejected")}
                     className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"

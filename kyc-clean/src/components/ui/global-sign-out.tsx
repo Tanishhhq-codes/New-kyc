@@ -54,9 +54,12 @@ export function GlobalSignOut() {
       <button
         onClick={async () => {
           setLoading(true);
-          await supabase.auth.signOut();
-          setLoading(false);
-          router.push("/login");
+          try {
+            await supabase.auth.signOut();
+            router.replace("/login");
+          } finally {
+            setLoading(false);
+          }
         }}
         className="rounded-full border border-zinc-700 bg-zinc-900/90 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-200 shadow-sm backdrop-blur transition hover:bg-zinc-800"
       >
